@@ -96,7 +96,14 @@ class UserStatus(IntEnum):
     PROBATION = 1  # New, with email not yet confirmed.
     BANNED = 5  # site-ban
     DELETED = 10
-
+    
+class UserRole(IntEnum):
+    ACTIVE = 0 # Standard user role
+    PROBATION = 1 # New user with no confirmed email yet
+    SUSPENDED = 2 # User can view the site but not post anything
+    BANNED = 3 # Sitebanned user
+    DELETED = 4 # Deleted user
+    ADMIN = 5 # Admin
 
 class User(BaseModel):
     uid = CharField(primary_key=True, max_length=40)
@@ -191,6 +198,8 @@ class Sub(BaseModel):
     creation = DateTimeField(default=datetime.datetime.utcnow)
     subscribers = IntegerField(default=1)
     posts = IntegerField(default=0)
+    # 0 = not banned, 1 = banned
+    banned = IntegerField(null=True)
 
     def __repr__(self):
         return f"<Sub {self.name}>"
@@ -280,14 +289,19 @@ class SubMetadata(BaseModel):
 
 class SubPost(BaseModel):
     content = TextField(null=True)
-    deleted = IntegerField(null=True)  # 1=self delete, 2=mod delete, 0=not deleted
+    # 0 = not deleted, 1 = deleted by self, 2 = removed by mod/admin
+    deleted = IntegerField(null=True)
+    # 0 = normal, 1 = mod, 2 = admin
     distinguish = IntegerField(null=True)  # 1=mod, 2=admin, 0 or null = normal
     link = CharField(null=True)
     nsfw = BooleanField(null=True)
     pid = PrimaryKeyField()
     posted = DateTimeField(null=True)
     edited = DateTimeField(null=True)
-    ptype = IntegerField(null=True)  # 1=text, 2=link, 3=poll
+    # 0 = unlocked, 1 = locked
+    locked = IntegerField(null=True)
+    # 1 = text, 2 = link, 3 = poll
+    ptype = IntegerField(null=True)
 
     score = IntegerField(null=True)  # XXX: Deprecated
     upvotes = IntegerField(default=0)
@@ -477,7 +491,7 @@ class UserMetadata(BaseModel):
     class Meta:
         table_name = "user_metadata"
 
-
+# Ooh, shiny!
 class Badge(BaseModel):
     bid = PrimaryKeyField()
     # supercalifragilisticexpialidocious == 34
