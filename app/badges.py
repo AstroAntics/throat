@@ -22,17 +22,9 @@ class Badges:
 
     def __iter__(self):
         """
-        Returns a list of all bagdes in the database.
+        Returns a list of all badges in the database.
         """
-        badge_query = Badge.select(
-            Badge.bid,
-            Badge.name,
-            Badge.alt,
-            Badge.icon,
-            Badge.score,
-            Badge.trigger,
-            Badge.rank,
-        ).order_by(Badge.rank, Badge.name)
+        badge_query = Badge.select(Badge.bid, Badge.name, Badge.alt, Badge.icon, Badge.score, Badge.trigger, Badge.rank).order_by(Badge.rank, Badge.name)
         return (x for x in badge_query)
 
     def __getitem__(self, bid):
@@ -53,9 +45,7 @@ class Badges:
         else:
             icon = self[bid].icon
 
-        Badge.update(
-            name=name, alt=alt, icon=icon, score=score, rank=rank, trigger=trigger
-        ).where(Badge.bid == bid).execute()
+        Badge.update(name=name, alt=alt, icon=icon, score=score, rank=rank, trigger=trigger).where(Badge.bid == bid).execute()
 
     @staticmethod
     def new_badge(name, alt, icon, score, rank, trigger=None):
@@ -63,9 +53,7 @@ class Badges:
         Creates a new badge with an optional trigger.
         """
         icon = gen_icon(icon)
-        Badge.create(
-            name=name, alt=alt, icon=icon, score=score, rank=rank, trigger=trigger
-        )
+        Badge.create(name=name, alt=alt, icon=icon, score=score, rank=rank, trigger=trigger)
 
     @staticmethod
     def delete_badge(bid):
@@ -73,9 +61,7 @@ class Badges:
         Deletes a badge by ID
         """
         Badge.delete().where(Badge.bid == bid).execute()
-        UserMetadata.delete().where(
-            (UserMetadata.key == "badge") & (UserMetadata.value == bid)
-        ).execute()
+        UserMetadata.delete().where((UserMetadata.key == "badge") & (UserMetadata.value == bid)).execute()
 
     @staticmethod
     def assign_userbadge(uid, bid):
@@ -83,17 +69,18 @@ class Badges:
         Gives a badge to a user
         """
         UserMetadata.get_or_create(key="badge", uid=uid, value=bid)
+        
+    @staticmethod
+    # Removes a badge from a user
+    def revoke_badge(uid, bid):
+        UserMetadata.delete().where(UserMetadata.key =="badge") & (UserMetadata.uid == uid) & (UserMetadata.value == str(bid))).execute()
 
     @staticmethod
     def unassign_userbadge(uid, bid):
         """
         Removes a badge from a user
         """
-        UserMetadata.delete().where(
-            (UserMetadata.key == "badge")
-            & (UserMetadata.uid == uid)
-            & (UserMetadata.value == str(bid))
-        ).execute()
+        UserMetadata.delete().where((UserMetadata.key == "badge") & (UserMetadata.uid == uid) & (UserMetadata.value == str(bid))).execute()
 
     @staticmethod
     def triggers():
@@ -107,18 +94,9 @@ class Badges:
         """
         Returns a list of badges associated with a user.
         """
-        return (
-            Badge.select(
-                Badge.bid, Badge.name, Badge.icon, Badge.score, Badge.alt, Badge.rank
-            )
-            .join(
-                UserMetadata,
-                JOIN.LEFT_OUTER,
-                on=(UserMetadata.value.cast("int") == Badge.bid),
-            )
-            .where((UserMetadata.uid == uid) & (UserMetadata.key == "badge"))
-            .order_by(Badge.rank, Badge.name)
-        )
+        return (Badge.select(Badge.bid, Badge.name, Badge.icon, Badge.score, Badge.alt, Badge.rank).
+                join(UserMetadata, JOIN.LEFT_OUTER, on=(UserMetadata.value.cast("int") == Badge.bid),
+                ).where((UserMetadata.uid == uid) & (UserMetadata.key == "badge")).order_by(Badge.rank, Badge.name))
 
 
 def gen_icon(icon):
